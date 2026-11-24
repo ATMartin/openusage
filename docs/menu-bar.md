@@ -1,7 +1,7 @@
 # Menu bar
 
-The strip shows the limits closest to running out, or with Always Show In Menu Bar everything
-Priority lists.
+The strip shows the limits closest to running out, with Always Show In Menu Bar everything
+Priority lists, or with Stacked only your pins grouped by provider.
 
 - Left-click the icon to open the panel. Right-click (or control-click) it for **Settings** and
   **Quit OpenUsage**.
@@ -11,6 +11,11 @@ Priority lists.
   order: Pinned, Running Out, Use It or Lose It, then Used Up. A pinned limit shows once, where
   Priority lists it.
 - Each limit shows the provider's mark, a short name, and its value. An account can appear more than once.
+- With **Settings → Display → Stacked** on, only pinned metrics show, grouped by provider in saved
+  order, including used-up pins. **Max Items In Menu Bar** counts stacks and the overflow counts
+  omitted providers. **Always Show In Menu Bar** does not apply. Each provider can have at most two
+  pins across its accounts; unified copies count once. More pins disable stacking with a warning in
+  Display settings until enough are unpinned. Without pins, the app icon shows.
 - Limits past that number show as a count, like `+7`. Used Up limits never count. With Always Show
   In Menu Bar off, only limits running out show or count.
 - With nothing to show, or with **App Icon Only**, the strip shows the app icon.

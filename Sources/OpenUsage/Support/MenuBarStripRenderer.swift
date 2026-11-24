@@ -79,21 +79,19 @@ struct MenuBarTextStrip: View {
 
     var body: some View {
         HStack(spacing: 11) {
-            ForEach(content.items) { item in
-                HStack(spacing: 4) {
-                    glyph(item.provider.icon)
-                        .overlay(alignment: .bottomTrailing) {
-                            if let badge = item.provider.badge {
-                                AccountBadge(text: badge)
-                                    .offset(x: AccountBadge.overhang.width, y: AccountBadge.overhang.height)
-                            }
-                        }
-                        .compositingGroup()
-                        // The renderer draws only inside layout bounds, so reserve the badge's overhang
-                        // (vertically on both sides, keeping the mark centred on its values) or it is cut off.
-                        .padding(.trailing, item.provider.badge == nil ? 0 : AccountBadge.overhang.width)
-                        .padding(.vertical, item.provider.badge == nil ? 0 : AccountBadge.overhang.height)
-                    labelledValue(item)
+            if content.stacked {
+                ForEach(content.stacks) { stack in
+                    HStack(spacing: 4) {
+                        providerGlyph(stack.provider)
+                        stackedValues(stack.items)
+                    }
+                }
+            } else {
+                ForEach(content.items) { item in
+                    HStack(spacing: 4) {
+                        providerGlyph(item.provider)
+                        labelledValue(item)
+                    }
                 }
             }
             if content.overflow > 0 {
@@ -110,6 +108,35 @@ struct MenuBarTextStrip: View {
         .padding(.vertical, 1)
         .fixedSize()
         .compositingGroup()
+    }
+
+    private func providerGlyph(_ provider: Provider) -> some View {
+        glyph(provider.icon)
+            .overlay(alignment: .bottomTrailing) {
+                if let badge = provider.badge {
+                    AccountBadge(text: badge)
+                        .offset(x: AccountBadge.overhang.width, y: AccountBadge.overhang.height)
+                }
+            }
+            .compositingGroup()
+            // Reserve the badge's overhang so ImageRenderer doesn't clip it.
+            .padding(.trailing, provider.badge == nil ? 0 : AccountBadge.overhang.width)
+            .padding(.vertical, provider.badge == nil ? 0 : AccountBadge.overhang.height)
+    }
+
+    /// Match the 0.7 text strip: a bare value, or two compact, right-aligned values.
+    @ViewBuilder
+    private func stackedValues(_ items: [MenuBarContent.Item]) -> some View {
+        if items.count == 1 {
+            Text(items[0].value)
+                .font(.system(size: 12, weight: .bold))
+        } else {
+            VStack(alignment: .trailing, spacing: -2) {
+                ForEach(items) { Text($0.value) }
+            }
+            .font(.system(size: 9, weight: .semibold))
+            .fixedSize()
+        }
     }
 
     private func labelledValue(_ item: MenuBarContent.Item) -> some View {

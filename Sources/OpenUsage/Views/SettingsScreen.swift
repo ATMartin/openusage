@@ -100,15 +100,30 @@ struct SettingsScreen: View {
     @ViewBuilder
     private var displayTab: some View {
         @Bindable var dataStore = dataStore
+        let stackedWarning = layout.stackedMenuBarWarning
+        let stacked = dataStore.menuBarStacked && stackedWarning == nil
         Section {
-            PriorityIconsPreview()
+            PriorityIconsPreview(stacked: stacked)
             picker("Max Items In Menu Bar", selection: $dataStore.menuBarLimit, options: MenuBarLimit.allCases.map { ($0, $0.label) })
+            Toggle("Stacked", isOn: Binding(
+                get: { stacked },
+                set: { dataStore.menuBarStacked = $0 }
+            ))
+            .disabled(stackedWarning != nil)
+            .accessibilityLabel("Stacked")
             Toggle(isOn: $dataStore.menuBarAlwaysShows) {
                 titled("Always Show In Menu Bar", info: "Show icons in the menu bar even if not requiring your attention yet")
             }
-            .disabled(dataStore.menuBarLimit == .iconOnly)
+            .disabled(dataStore.menuBarLimit == .iconOnly || stacked)
         } header: {
             Text("Menu Bar Icons")
+        } footer: {
+            if let stackedWarning {
+                SettingsNote(stackedWarning)
+            } else if stacked {
+                Text("Shows only pinned metrics, up to two per provider. Max Items counts provider stacks.")
+                    .font(.system(size: 11))
+            }
         }
         Section("Usage") {
             picker("Show Usage As", selection: $dataStore.meterStyle, options: WidgetDisplayMode.allCases.map { ($0, $0.label) })
@@ -309,6 +324,7 @@ struct SettingsScreen: View {
 /// out right now. Drawn live at one scale that fits the most it can hold in a row.
 struct PriorityIconsPreview: View {
     @Environment(WidgetDataStore.self) private var dataStore
+    var stacked = false
 
     private static let height: CGFloat = 30
     private static let scale: CGFloat = 0.8
@@ -318,8 +334,20 @@ struct PriorityIconsPreview: View {
         (.copilot, nil, "Credits", "7%"),
     ]
 
-    static func sample(limit: MenuBarLimit) -> MenuBarContent {
+    static func sample(limit: MenuBarLimit, stacked: Bool = false) -> MenuBarContent {
         guard limit != .iconOnly else { return MenuBarContent(items: []) }
+        if stacked {
+            let kinds: [ProviderKind] = [.claude, .codex, .cursor, .antigravity, .grok, .copilot]
+            let items = kinds.prefix(limit.count).flatMap { kind in
+                ["Session", "Weekly"].enumerated().map { index, label in
+                    MenuBarContent.Item(
+                        id: "\(kind.rawValue).\(label)", provider: Provider(id: kind.rawValue, kind: kind),
+                        label: label, shortLabel: label, value: index == 0 ? "38%" : "26%"
+                    )
+                }
+            }
+            return MenuBarContent(items: items, stacked: true, overflow: max(0, kinds.count - limit.count))
+        }
         let shown = samples.prefix(limit.count).enumerated().map { index, sample in
             MenuBarContent.Item(
                 id: "sample.\(index)",
@@ -333,7 +361,7 @@ struct PriorityIconsPreview: View {
     }
 
     var body: some View {
-        let content = Self.sample(limit: dataStore.menuBarLimit)
+        let content = Self.sample(limit: dataStore.menuBarLimit, stacked: stacked)
         Color.primary
             .frame(height: Self.height)
             .mask {

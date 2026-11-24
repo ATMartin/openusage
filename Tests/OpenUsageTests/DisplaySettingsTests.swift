@@ -32,6 +32,35 @@ final class DisplaySettingsTests: QuietWindowTestCase {
         try await assertHeadingsAndPickers(.alerts, ["Thresholds", "30% left", "10% left", "Alerts"])
     }
 
+    func testStackedSwitchSavesAndDisablesWithAWarningWhenAThirdPinIsAdded() async throws {
+        let defaults = isolatedDefaults()
+        let (container, window, host) = showSettings(.display, defaults: defaults)
+        defer { window.close() }
+        container.layout.apply(registry: .mock)
+        for key in ["session", "weekly"] { container.layout.setMetric("claude.\(key)", pinned: true) }
+        func stackedSwitch() -> NSObject? {
+            nodes(in: host).first {
+                $0.value(forKey: "accessibilityRole") as? String == NSAccessibility.Role.checkBox.rawValue
+                    && $0.value(forKey: "accessibilityLabel") as? String == "Stacked"
+            }
+        }
+        func isOn() -> Bool? { (stackedSwitch()?.value(forKey: "accessibilityValue") as? NSNumber)?.boolValue }
+        func isEnabled() -> Bool? { stackedSwitch()?.value(forKey: "accessibilityEnabled") as? Bool }
+        try await waitUntil { stackedSwitch() != nil }
+        XCTAssertEqual(isOn(), false)
+        XCTAssertEqual(isEnabled(), true)
+        stackedSwitch()?.perform(NSSelectorFromString("accessibilityPerformPress"))
+        try await waitUntil { container.dataStore.menuBarStacked && isOn() == true }
+        XCTAssertTrue(defaults.bool(forKey: "menuBarStacked"))
+        container.layout.setMetric("claude.extra", pinned: true)
+        try await waitUntil { isEnabled() == false && isOn() == false }
+        let warning = try XCTUnwrap(container.layout.stackedMenuBarWarning)
+        try await waitUntil { self.texts(in: host).contains(warning) }
+        container.layout.setMetric("claude.extra", pinned: false)
+        try await waitUntil { isEnabled() == true && isOn() == true }
+        XCTAssertFalse(texts(in: host).contains(warning))
+    }
+
     func testEachDisplayRowExplainsItselfInAnInfoTooltipInsteadOfASecondLine() async throws {
         try await assertExplainedByInfoIcons(.display, [
             "Show icons in the menu bar even if not requiring your attention yet", "Where usage would be at an even pace",
