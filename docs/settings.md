@@ -21,7 +21,8 @@ Alerts, and Advanced. Changes apply at once. Hover the ⓘ beside a setting to s
 - **Always Show In Menu Bar.** The menu bar lists everything Priority does, in its order: Pinned,
   Running Out, Use It or Lose It, then Used Up. Off by default, showing only what's running out.
 - **Stacked.** Shows only pinned metrics, grouped by provider in your saved order. Max Items counts
-  provider stacks. Off by default; Always Show In Menu Bar does not apply while stacking. More than
+  provider stacks. Off by default; pins always show while stacking, so Always Show In Menu Bar is
+  disabled and keeps its saved value for when you turn Stacked off. More than
   two pins for any provider disables stacking with a warning and uses the regular menu bar until
   you unpin enough metrics. Unified copies of the same metric count once.
 

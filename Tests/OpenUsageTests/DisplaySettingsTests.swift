@@ -34,6 +34,7 @@ final class DisplaySettingsTests: QuietWindowTestCase {
 
     func testStackedSwitchSavesAndDisablesWithAWarningWhenAThirdPinIsAdded() async throws {
         let defaults = isolatedDefaults()
+        defaults.set(true, forKey: "menuBarAlwaysShows")
         let (container, window, host) = showSettings(.display, defaults: defaults)
         defer { window.close() }
         container.layout.apply(registry: .mock)
@@ -46,19 +47,31 @@ final class DisplaySettingsTests: QuietWindowTestCase {
         }
         func isOn() -> Bool? { (stackedSwitch()?.value(forKey: "accessibilityValue") as? NSNumber)?.boolValue }
         func isEnabled() -> Bool? { stackedSwitch()?.value(forKey: "accessibilityEnabled") as? Bool }
+        func alwaysShowEnabled() -> Bool? {
+            nodes(in: host).first {
+                $0.value(forKey: "accessibilityRole") as? String == NSAccessibility.Role.checkBox.rawValue
+                    && $0.value(forKey: "accessibilityLabel") as? String == "Always Show In Menu Bar"
+            }?.value(forKey: "accessibilityEnabled") as? Bool
+        }
         try await waitUntil { stackedSwitch() != nil }
         XCTAssertEqual(isOn(), false)
         XCTAssertEqual(isEnabled(), true)
+        XCTAssertEqual(alwaysShowEnabled(), true)
         stackedSwitch()?.perform(NSSelectorFromString("accessibilityPerformPress"))
-        try await waitUntil { container.dataStore.menuBarStacked && isOn() == true }
+        try await waitUntil { container.dataStore.menuBarStacked && isOn() == true && alwaysShowEnabled() == false }
         XCTAssertTrue(defaults.bool(forKey: "menuBarStacked"))
+        XCTAssertTrue(texts(in: host).contains { $0.contains("Always Show In Menu Bar is disabled.") })
+        XCTAssertTrue(container.dataStore.menuBarAlwaysShows, "stacking preserves the saved preference")
         container.layout.setMetric("claude.extra", pinned: true)
-        try await waitUntil { isEnabled() == false && isOn() == false }
+        try await waitUntil { isEnabled() == false && isOn() == false && alwaysShowEnabled() == true }
         let warning = try XCTUnwrap(container.layout.stackedMenuBarWarning)
         try await waitUntil { self.texts(in: host).contains(warning) }
         container.layout.setMetric("claude.extra", pinned: false)
-        try await waitUntil { isEnabled() == true && isOn() == true }
+        try await waitUntil { isEnabled() == true && isOn() == true && alwaysShowEnabled() == false }
         XCTAssertFalse(texts(in: host).contains(warning))
+        stackedSwitch()?.perform(NSSelectorFromString("accessibilityPerformPress"))
+        try await waitUntil { isOn() == false && alwaysShowEnabled() == true }
+        XCTAssertTrue(defaults.bool(forKey: "menuBarAlwaysShows"), "leaving Stacked restores the original setting")
     }
 
     func testEachDisplayRowExplainsItselfInAnInfoTooltipInsteadOfASecondLine() async throws {
