@@ -111,21 +111,21 @@ struct SettingsScreen: View {
             ))
             .disabled(stackedWarning != nil)
             .accessibilityLabel("Stacked")
-            Toggle(isOn: $dataStore.menuBarAlwaysShows) {
-                titled("Always Show In Menu Bar", info: "Show icons in the menu bar even if not requiring your attention yet")
+            if !stacked {
+                Toggle(isOn: $dataStore.menuBarAlwaysShows) {
+                    titled("Always Show In Menu Bar", info: "Show icons in the menu bar even if not requiring your attention yet")
+                }
+                .disabled(dataStore.menuBarLimit == .iconOnly)
+                .accessibilityLabel("Always Show In Menu Bar")
             }
-            .disabled(dataStore.menuBarLimit == .iconOnly || stacked)
-            .accessibilityLabel("Always Show In Menu Bar")
         } header: {
             Text("Menu Bar Icons")
         } footer: {
             if let stackedWarning {
                 SettingsNote(stackedWarning)
-            } else if stacked {
-                Text("Stacked always shows your pins, up to two per provider. Always Show In Menu Bar is disabled. Max Items counts provider stacks.")
-                    .font(.system(size: 11))
             }
         }
+        .animation(Motion.spring, value: stacked)
         Section("Usage") {
             picker("Show Usage As", selection: $dataStore.meterStyle, options: WidgetDisplayMode.allCases.map { ($0, $0.label) })
             picker("Reset Times", selection: $dataStore.resetDisplayMode, options: ResetDisplayMode.allCases.map { ($0, $0.label) })
